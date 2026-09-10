@@ -98,9 +98,14 @@ const saving = ref(false);
 let hydrated = false;
 watch(
   existingItem,
-  (val) => {
+  async (val) => {
     if (val && !hydrated) {
       hydrated = true;
+      if (isEdit.value && val.status !== 'unclaimed') {
+        await showError('This item can no longer be edited.');
+        router.replace(`/items/${val.id}`);
+        return;
+      }
       form.itemName = val.itemName;
       form.description = val.description;
       form.location = val.location;

@@ -7,7 +7,7 @@
         </ion-buttons>
         <ion-title>Item Details</ion-title>
         <ion-buttons slot="end" v-if="item">
-          <ion-button @click="router.push(`/items/${item.id}/edit`)">
+          <ion-button v-if="item.status === 'unclaimed'" @click="router.push(`/items/${item.id}/edit`)">
             <ion-icon slot="icon-only" :icon="createOutline"></ion-icon>
           </ion-button>
           <ion-button v-if="isAdmin" color="danger" @click="confirmDelete">
