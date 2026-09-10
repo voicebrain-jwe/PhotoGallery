@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
-import { getAnalytics } from 'firebase/analytics';
+import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,7 +19,18 @@ const app = initializeApp(firebaseConfig);
 // Firebase Realtime Database
 const db = getDatabase(app);
 
-// Firebase Analytics
-const analytics = getAnalytics(app);
+// Firebase Analytics isn't supported inside the Capacitor Android WebView,
+// so it must be loaded lazily and only when the environment supports it —
+// calling getAnalytics() synchronously there can throw and block app startup.
+let analytics: Analytics | undefined;
+isSupported()
+  .then((supported) => {
+    if (supported) {
+      analytics = getAnalytics(app);
+    }
+  })
+  .catch(() => {
+    // Analytics support check failed; continue without analytics.
+  });
 
 export { app, db, analytics };

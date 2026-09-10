@@ -2,14 +2,14 @@
   <ion-page>
     <ion-header :translucent="true">
       <ion-toolbar color="primary">
-        <ion-title>Photo Gallery</ion-title>
+        <ion-title>Photos</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true">
       <ion-header collapse="condense">
         <ion-toolbar color="primary">
-          <ion-title size="large">Photo Gallery</ion-title>
+          <ion-title size="large">Photos</ion-title>
         </ion-toolbar>
       </ion-header>
 
