@@ -44,7 +44,10 @@ jobs:
       #    that was causing a crash on app startup (black screen).
       # ----------------------------------------------------------
       - name: Create .env file
-        run: echo "${{ secrets.FIREBASE_ENV }}" > .env
+        run: |
+          printf '%s\n' "${{ secrets.FIREBASE_ENV }}" | tr -d '\r' > .env
+          echo "Keys written to .env:"
+          cut -d= -f1 .env
 
 
       # ----------------------------------------------------------

@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-const ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || '1234';
+const ADMIN_PIN = (import.meta.env.VITE_ADMIN_PIN || '1234').trim();
 const STORAGE_KEY = 'lf_is_admin';
 
 const isAdmin = ref(localStorage.getItem(STORAGE_KEY) === 'true');
