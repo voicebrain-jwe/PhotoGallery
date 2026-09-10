@@ -3,6 +3,11 @@
     <ion-header :translucent="true">
       <ion-toolbar color="primary">
         <ion-title>Lost &amp; Found</ion-title>
+        <ion-buttons slot="end">
+          <ion-button @click="toggleAdmin">
+            <ion-icon slot="icon-only" :icon="isAdmin ? shieldCheckmark : shieldOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
         <ion-searchbar
@@ -12,12 +17,15 @@
         ></ion-searchbar>
       </ion-toolbar>
       <ion-toolbar>
-        <ion-segment v-model="statusFilter">
+        <ion-segment v-model="statusFilter" scrollable>
           <ion-segment-button value="all">
             <ion-label>All</ion-label>
           </ion-segment-button>
           <ion-segment-button value="unclaimed">
             <ion-label>Unclaimed</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="pending">
+            <ion-label>Pending</ion-label>
           </ion-segment-button>
           <ion-segment-button value="claimed">
             <ion-label>Claimed</ion-label>
@@ -57,12 +65,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { alertController, toastController } from '@ionic/vue';
 import {
   IonContent,
   IonHeader,
   IonPage,
   IonTitle,
   IonToolbar,
+  IonButtons,
+  IonButton,
   IonSearchbar,
   IonSegment,
   IonSegmentButton,
@@ -74,15 +85,17 @@ import {
   IonFab,
   IonFabButton,
 } from '@ionic/vue';
-import { add, searchOutline } from 'ionicons/icons';
+import { add, searchOutline, shieldOutline, shieldCheckmark } from 'ionicons/icons';
 import { useItems } from '@/composables/useItems';
+import { useAdmin } from '@/composables/useAdmin';
 import ItemCard from '@/components/ItemCard.vue';
 
 const router = useRouter();
 const { items, loading } = useItems();
+const { isAdmin, loginAdmin, logoutAdmin } = useAdmin();
 
 const searchQuery = ref('');
-const statusFilter = ref<'all' | 'unclaimed' | 'claimed'>('all');
+const statusFilter = ref<'all' | 'unclaimed' | 'pending' | 'claimed'>('all');
 
 const filteredItems = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
@@ -98,6 +111,51 @@ const filteredItems = computed(() => {
 
 const goToDetail = (id: string) => {
   router.push(`/items/${id}`);
+};
+
+const toggleAdmin = async () => {
+  if (isAdmin.value) {
+    const alert = await alertController.create({
+      header: 'Log out admin?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Log out', handler: () => logoutAdmin() },
+      ],
+    });
+    await alert.present();
+    return;
+  }
+
+  const alert = await alertController.create({
+    header: 'Admin login',
+    message: 'Enter the admin PIN.',
+    inputs: [{ name: 'pin', type: 'password', placeholder: 'PIN' }],
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Login',
+        handler: async (data) => {
+          if (!loginAdmin((data.pin || '').trim())) {
+            const toast = await toastController.create({
+              message: 'Incorrect PIN.',
+              duration: 1800,
+              color: 'danger',
+            });
+            await toast.present();
+            return false;
+          }
+          const toast = await toastController.create({
+            message: 'Admin mode enabled.',
+            duration: 1800,
+            color: 'success',
+          });
+          await toast.present();
+          return true;
+        },
+      },
+    ],
+  });
+  await alert.present();
 };
 </script>
 

@@ -14,9 +14,7 @@
         {{ item.location }} &middot; {{ formattedDate }}
       </p>
       <div class="badges">
-        <ion-badge :color="item.status === 'claimed' ? 'medium' : 'primary'">
-          {{ item.status === 'claimed' ? 'Claimed' : 'Unclaimed' }}
-        </ion-badge>
+        <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
       </div>
     </ion-label>
   </ion-item>
@@ -36,6 +34,18 @@ const formattedDate = computed(() => {
   const d = new Date(props.item.date);
   if (isNaN(d.getTime())) return props.item.date;
   return d.toLocaleDateString();
+});
+
+const statusLabel = computed(() => {
+  if (props.item.status === 'claimed') return 'Claimed';
+  if (props.item.status === 'pending') return 'Pending';
+  return 'Unclaimed';
+});
+
+const statusColor = computed(() => {
+  if (props.item.status === 'claimed') return 'medium';
+  if (props.item.status === 'pending') return 'warning';
+  return 'primary';
 });
 </script>
 

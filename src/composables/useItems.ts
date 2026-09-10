@@ -8,7 +8,7 @@ import {
   onValue,
 } from 'firebase/database';
 import { db } from '@/firebase';
-import { ItemFormData, LostFoundItem } from '@/types/item';
+import { ClaimRequest, ItemFormData, LostFoundItem } from '@/types/item';
 
 const items = ref<LostFoundItem[]>([]);
 const loading = ref(true);
@@ -59,16 +59,46 @@ export function useItems() {
     await remove(dbRef(db, `items/${id}`));
   };
 
-  const claimItem = async (id: string, claimedBy: string) => {
-    await updateItem(id, {
+  // Claiming an item just files a claim request; it does not mark the item
+  // as claimed. Multiple people can file a claim while it's pending —
+  // only an admin approving one moves the item to 'claimed'.
+  const claimItem = async (id: string, claimantName: string) => {
+    const item = items.value.find((i) => i.id === id);
+    const claim: ClaimRequest = {
+      name: claimantName,
+      date: new Date().toISOString().slice(0, 10),
+    };
+    await set(push(dbRef(db, `items/${id}/claims`)), claim);
+    if (!item || item.status === 'unclaimed') {
+      await updateItem(id, { status: 'pending' });
+    }
+  };
+
+  const approveClaim = async (id: string, claim: ClaimRequest) => {
+    await update(dbRef(db, `items/${id}`), {
       status: 'claimed',
-      claimedBy,
-      dateclaimed: new Date().toISOString().slice(0, 10),
+      claimedBy: claim.name,
+      dateclaimed: claim.date,
+      claims: null,
+    });
+  };
+
+  const rejectClaim = async (id: string, claimId: string) => {
+    const item = items.value.find((i) => i.id === id);
+    const remaining = Object.keys(item?.claims || {}).filter((k) => k !== claimId);
+    await update(dbRef(db, `items/${id}`), {
+      [`claims/${claimId}`]: null,
+      ...(remaining.length === 0 ? { status: 'unclaimed' } : {}),
     });
   };
 
   const unclaimItem = async (id: string) => {
-    await updateItem(id, { status: 'unclaimed', claimedBy: '', dateclaimed: '' });
+    await update(dbRef(db, `items/${id}`), {
+      status: 'unclaimed',
+      claimedBy: '',
+      dateclaimed: '',
+      claims: null,
+    });
   };
 
   return {
@@ -78,6 +108,8 @@ export function useItems() {
     updateItem,
     deleteItem,
     claimItem,
+    approveClaim,
+    rejectClaim,
     unclaimItem,
   };
 }

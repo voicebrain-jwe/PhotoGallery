@@ -1,4 +1,9 @@
-export type ItemStatus = 'unclaimed' | 'claimed';
+export type ItemStatus = 'unclaimed' | 'pending' | 'claimed';
+
+export interface ClaimRequest {
+  name: string;
+  date: string;
+}
 
 export interface LostFoundItem {
   id: string;
@@ -10,6 +15,7 @@ export interface LostFoundItem {
   status: ItemStatus;
   claimedBy: string;
   dateclaimed: string;
+  claims?: Record<string, ClaimRequest>;
 }
 
 export interface ItemFormData {

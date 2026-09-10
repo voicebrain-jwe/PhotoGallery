@@ -10,7 +10,7 @@
           <ion-button @click="router.push(`/items/${item.id}/edit`)">
             <ion-icon slot="icon-only" :icon="createOutline"></ion-icon>
           </ion-button>
-          <ion-button color="danger" @click="confirmDelete">
+          <ion-button v-if="isAdmin" color="danger" @click="confirmDelete">
             <ion-icon slot="icon-only" :icon="trashOutline"></ion-icon>
           </ion-button>
         </ion-buttons>
@@ -36,9 +36,7 @@
 
         <div class="content-pad">
           <div class="badges">
-            <ion-badge :color="item.status === 'claimed' ? 'medium' : 'primary'">
-              {{ item.status === 'claimed' ? 'Claimed' : 'Unclaimed' }}
-            </ion-badge>
+            <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
           </div>
 
           <h1>{{ item.itemName }}</h1>
@@ -61,6 +59,25 @@
             <ion-icon :icon="checkmarkCircleOutline" color="success"></ion-icon>
             <span>Claimed by {{ item.claimedBy }}<template v-if="item.dateclaimed"> on {{ formattedClaimedDate }}</template></span>
           </div>
+
+          <template v-if="claimsList.length">
+            <h3>Pending claims</h3>
+            <ion-list lines="full" class="info-list">
+              <ion-item v-for="c in claimsList" :key="c.id">
+                <ion-label>
+                  <h2>{{ c.name }}</h2>
+                  <p>{{ c.date }}</p>
+                </ion-label>
+                <ion-buttons v-if="isAdmin" slot="end">
+                  <ion-button color="success" @click="approve(c)">Approve</ion-button>
+                  <ion-button color="medium" @click="reject(c.id)">Reject</ion-button>
+                </ion-buttons>
+              </ion-item>
+            </ion-list>
+            <p v-if="!isAdmin" class="pending-note">
+              <ion-text color="medium">Awaiting admin approval.</ion-text>
+            </p>
+          </template>
         </div>
 
         <div class="action-bar">
@@ -72,7 +89,7 @@
             <ion-icon slot="start" :icon="checkmarkCircleOutline"></ion-icon>
             Claim this item
           </ion-button>
-          <ion-button v-else expand="block" fill="outline" @click="unclaim">
+          <ion-button v-else-if="isAdmin" expand="block" fill="outline" @click="unclaim">
             Undo claim
           </ion-button>
         </div>
@@ -84,7 +101,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { alertController, toastController } from '@ionic/vue';
+import { alertController } from '@ionic/vue';
 import {
   IonPage,
   IonHeader,
@@ -112,13 +129,34 @@ import {
   imageOutline,
 } from 'ionicons/icons';
 import { useItems } from '@/composables/useItems';
+import { useAdmin } from '@/composables/useAdmin';
+import { ClaimRequest } from '@/types/item';
 
 const route = useRoute();
 const router = useRouter();
-const { items, loading, deleteItem, claimItem, unclaimItem } = useItems();
+const { items, loading, deleteItem, claimItem, approveClaim, rejectClaim, unclaimItem } = useItems();
+const { isAdmin } = useAdmin();
 
 const itemId = computed(() => route.params.id as string);
 const item = computed(() => items.value.find((i) => i.id === itemId.value));
+
+const claimsList = computed(() => {
+  const claims = item.value?.claims;
+  if (!claims) return [];
+  return Object.entries(claims).map(([id, claim]) => ({ id, ...claim }));
+});
+
+const statusLabel = computed(() => {
+  if (item.value?.status === 'claimed') return 'Claimed';
+  if (item.value?.status === 'pending') return 'Pending';
+  return 'Unclaimed';
+});
+
+const statusColor = computed(() => {
+  if (item.value?.status === 'claimed') return 'medium';
+  if (item.value?.status === 'pending') return 'warning';
+  return 'primary';
+});
 
 const formattedDate = computed(() => {
   if (!item.value?.date) return '';
@@ -165,12 +203,12 @@ const promptClaim = async () => {
           const name = (data.claimant || '').trim();
           if (!name || !item.value) return false;
           await claimItem(item.value.id, name);
-          const toast = await toastController.create({
-            message: 'Item claimed successfully.',
-            duration: 2000,
-            color: 'success',
+          const confirmAlert = await alertController.create({
+            header: 'Claim submitted',
+            message: 'Go to the Lost and Found area to verify and complete your claim.',
+            buttons: ['OK'],
           });
-          await toast.present();
+          await confirmAlert.present();
           return true;
         },
       },
@@ -182,6 +220,31 @@ const promptClaim = async () => {
 const unclaim = async () => {
   if (!item.value) return;
   await unclaimItem(item.value.id);
+};
+
+const approve = async (claim: { id: string; name: string; date: string }) => {
+  if (!item.value) return;
+  const alert = await alertController.create({
+    header: 'Approve claim?',
+    message: `Mark this item as claimed by ${claim.name}. Other pending claims will be cleared.`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Approve',
+        handler: async () => {
+          if (!item.value) return;
+          const request: ClaimRequest = { name: claim.name, date: claim.date };
+          await approveClaim(item.value.id, request);
+        },
+      },
+    ],
+  });
+  await alert.present();
+};
+
+const reject = async (claimId: string) => {
+  if (!item.value) return;
+  await rejectClaim(item.value.id, claimId);
 };
 </script>
 
