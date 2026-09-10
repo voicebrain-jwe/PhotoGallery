@@ -17,6 +17,15 @@
       <form v-else @submit.prevent="save">
         <item-photo-capture v-model="photoDraft" :existing-url="existingItem?.imgURL" />
 
+        <ion-segment v-if="!isEdit" v-model="form.type" class="type-segment">
+          <ion-segment-button value="found">
+            <ion-label>I found this</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="lost">
+            <ion-label>I lost this</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+
         <ion-list>
           <ion-item>
             <ion-label position="stacked">Item name *</ion-label>
@@ -62,6 +71,8 @@ import {
   IonButtons,
   IonBackButton,
   IonContent,
+  IonSegment,
+  IonSegmentButton,
   IonList,
   IonItem,
   IonLabel,
@@ -89,6 +100,7 @@ const form = reactive<ItemFormData>({
   description: '',
   location: '',
   date: new Date().toISOString().slice(0, 10),
+  type: 'found',
 });
 
 // undefined = no change, null = removed, string = new local photo path
@@ -140,7 +152,10 @@ const save = async () => {
   saving.value = true;
   try {
     if (isEdit.value && itemId.value) {
-      const changes: Record<string, unknown> = { ...form };
+      // type isn't editable here — only an admin can move an item from
+      // 'lost' to 'found' (see the "Mark as found" action).
+      const { type: _type, ...editable } = form;
+      const changes: Record<string, unknown> = { ...editable };
 
       if (photoDraft.value === null) {
         changes.imgURL = '';
@@ -174,5 +189,10 @@ const save = async () => {
 
 .submit-bar {
   padding: 16px;
+}
+
+.type-segment {
+  margin: 0 16px 8px;
+  width: auto;
 }
 </style>

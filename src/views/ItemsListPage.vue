@@ -17,6 +17,19 @@
         ></ion-searchbar>
       </ion-toolbar>
       <ion-toolbar>
+        <ion-segment v-model="typeFilter" scrollable>
+          <ion-segment-button value="all">
+            <ion-label>All</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="found">
+            <ion-label>Found</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="lost">
+            <ion-label>Lost</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+      <ion-toolbar v-if="typeFilter !== 'lost'">
         <ion-segment v-model="statusFilter" scrollable>
           <ion-segment-button value="all">
             <ion-label>All</ion-label>
@@ -95,12 +108,14 @@ const { items, loading } = useItems();
 const { isAdmin, loginAdmin, logoutAdmin } = useAdmin();
 
 const searchQuery = ref('');
+const typeFilter = ref<'all' | 'found' | 'lost'>('all');
 const statusFilter = ref<'all' | 'unclaimed' | 'pending' | 'claimed'>('all');
 
 const filteredItems = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   return items.value.filter((item) => {
-    if (statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
+    if (typeFilter.value !== 'all' && item.type !== typeFilter.value) return false;
+    if (typeFilter.value !== 'lost' && statusFilter.value !== 'all' && item.status !== statusFilter.value) return false;
     if (q) {
       const haystack = `${item.itemName} ${item.description} ${item.location}`.toLowerCase();
       if (!haystack.includes(q)) return false;

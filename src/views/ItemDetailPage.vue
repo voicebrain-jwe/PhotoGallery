@@ -36,7 +36,10 @@
 
         <div class="content-pad">
           <div class="badges">
-            <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
+            <ion-badge :color="item.type === 'lost' ? 'danger' : 'success'">
+              {{ item.type === 'lost' ? 'Lost' : 'Found' }}
+            </ion-badge>
+            <ion-badge v-if="item.type === 'found'" :color="statusColor">{{ statusLabel }}</ion-badge>
           </div>
 
           <h1>{{ item.itemName }}</h1>
@@ -55,43 +58,58 @@
           <h3>Description</h3>
           <p class="description">{{ item.description || 'No description provided.' }}</p>
 
-          <div v-if="item.status === 'claimed'" class="claim-info">
-            <ion-icon :icon="checkmarkCircleOutline" color="success"></ion-icon>
-            <span>Claimed by {{ item.claimedBy }}<template v-if="item.dateclaimed"> on {{ formattedClaimedDate }}</template></span>
+          <div v-if="item.type === 'lost'" class="claim-info">
+            <ion-icon :icon="informationCircleOutline" color="danger"></ion-icon>
+            <span>Reported lost. Once it's turned in at the Lost and Found area, an admin marks it Found so it can be claimed.</span>
           </div>
 
-          <template v-if="claimsList.length">
-            <h3>Pending claims</h3>
-            <ion-list lines="full" class="info-list">
-              <ion-item v-for="c in claimsList" :key="c.id">
-                <ion-label>
-                  <h2>{{ c.name }}</h2>
-                  <p>{{ c.date }}</p>
-                </ion-label>
-                <ion-buttons v-if="isAdmin" slot="end">
-                  <ion-button color="success" @click="approve(c)">Approve</ion-button>
-                  <ion-button color="medium" @click="reject(c.id)">Reject</ion-button>
-                </ion-buttons>
-              </ion-item>
-            </ion-list>
-            <p v-if="!isAdmin" class="pending-note">
-              <ion-text color="medium">Awaiting admin approval.</ion-text>
-            </p>
+          <template v-if="item.type === 'found'">
+            <div v-if="item.status === 'claimed'" class="claim-info">
+              <ion-icon :icon="checkmarkCircleOutline" color="success"></ion-icon>
+              <span>Claimed by {{ item.claimedBy }}<template v-if="item.dateclaimed"> on {{ formattedClaimedDate }}</template></span>
+            </div>
+
+            <template v-if="claimsList.length">
+              <h3>Pending claims</h3>
+              <ion-list lines="full" class="info-list">
+                <ion-item v-for="c in claimsList" :key="c.id">
+                  <ion-label>
+                    <h2>{{ c.name }}</h2>
+                    <p>{{ c.date }}</p>
+                  </ion-label>
+                  <ion-buttons v-if="isAdmin" slot="end">
+                    <ion-button color="success" @click="approve(c)">Approve</ion-button>
+                    <ion-button color="medium" @click="reject(c.id)">Reject</ion-button>
+                  </ion-buttons>
+                </ion-item>
+              </ion-list>
+              <p v-if="!isAdmin" class="pending-note">
+                <ion-text color="medium">Awaiting admin approval.</ion-text>
+              </p>
+            </template>
           </template>
         </div>
 
         <div class="action-bar">
-          <ion-button
-            v-if="item.status !== 'claimed'"
-            expand="block"
-            @click="promptClaim"
-          >
-            <ion-icon slot="start" :icon="checkmarkCircleOutline"></ion-icon>
-            Claim this item
-          </ion-button>
-          <ion-button v-else-if="isAdmin" expand="block" fill="outline" @click="unclaim">
-            Undo claim
-          </ion-button>
+          <template v-if="item.type === 'lost'">
+            <ion-button v-if="isAdmin" expand="block" @click="markFoundConfirm">
+              <ion-icon slot="start" :icon="checkmarkCircleOutline"></ion-icon>
+              Mark as found
+            </ion-button>
+          </template>
+          <template v-else>
+            <ion-button
+              v-if="item.status !== 'claimed'"
+              expand="block"
+              @click="promptClaim"
+            >
+              <ion-icon slot="start" :icon="checkmarkCircleOutline"></ion-icon>
+              Claim this item
+            </ion-button>
+            <ion-button v-else-if="isAdmin" expand="block" fill="outline" @click="unclaim">
+              Undo claim
+            </ion-button>
+          </template>
         </div>
       </template>
     </ion-content>
@@ -126,6 +144,7 @@ import {
   locationOutline,
   calendarOutline,
   checkmarkCircleOutline,
+  informationCircleOutline,
   imageOutline,
 } from 'ionicons/icons';
 import { useItems } from '@/composables/useItems';
@@ -134,7 +153,7 @@ import { ClaimRequest } from '@/types/item';
 
 const route = useRoute();
 const router = useRouter();
-const { items, loading, deleteItem, claimItem, approveClaim, rejectClaim, unclaimItem } = useItems();
+const { items, loading, deleteItem, claimItem, approveClaim, rejectClaim, unclaimItem, markFound } = useItems();
 const { isAdmin } = useAdmin();
 
 const itemId = computed(() => route.params.id as string);
@@ -245,6 +264,25 @@ const approve = async (claim: { id: string; name: string; date: string }) => {
 const reject = async (claimId: string) => {
   if (!item.value) return;
   await rejectClaim(item.value.id, claimId);
+};
+
+const markFoundConfirm = async () => {
+  if (!item.value) return;
+  const alert = await alertController.create({
+    header: 'Mark as found?',
+    message: 'This confirms the item has been turned in at the Lost and Found area. It will then be available to claim.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Mark as found',
+        handler: async () => {
+          if (!item.value) return;
+          await markFound(item.value.id);
+        },
+      },
+    ],
+  });
+  await alert.present();
 };
 </script>
 

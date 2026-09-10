@@ -14,7 +14,10 @@
         {{ item.location }} &middot; {{ formattedDate }}
       </p>
       <div class="badges">
-        <ion-badge :color="statusColor">{{ statusLabel }}</ion-badge>
+        <ion-badge :color="item.type === 'lost' ? 'danger' : 'success'">
+          {{ item.type === 'lost' ? 'Lost' : 'Found' }}
+        </ion-badge>
+        <ion-badge v-if="item.type === 'found'" :color="statusColor">{{ statusLabel }}</ion-badge>
       </div>
     </ion-label>
   </ion-item>

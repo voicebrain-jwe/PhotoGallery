@@ -1,4 +1,5 @@
 export type ItemStatus = 'unclaimed' | 'pending' | 'claimed';
+export type ItemType = 'lost' | 'found';
 
 export interface ClaimRequest {
   name: string;
@@ -12,6 +13,9 @@ export interface LostFoundItem {
   location: string;
   date: string;
   imgURL: string;
+  // A 'lost' report has no physical item on hand yet, so unclaimed/pending/
+  // claimed doesn't apply until an admin marks it 'found' (turned in).
+  type: ItemType;
   status: ItemStatus;
   claimedBy: string;
   dateclaimed: string;
@@ -23,4 +27,5 @@ export interface ItemFormData {
   description: string;
   location: string;
   date: string;
+  type: ItemType;
 }

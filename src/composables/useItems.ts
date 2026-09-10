@@ -23,7 +23,12 @@ function subscribe() {
     const val = snapshot.val() as Record<string, Omit<LostFoundItem, 'id'>> | null;
     items.value = val
       ? Object.entries(val)
-          .map(([id, item]) => ({ id, ...item }))
+          .map(([id, raw]) => {
+            const item = { id, ...raw } as LostFoundItem;
+            // Older records predate the lost/found split; treat them as 'found'.
+            if (!item.type) item.type = 'found';
+            return item;
+          })
           // Firebase push() keys sort chronologically, so this is newest-first
           .sort((a, b) => (a.id < b.id ? 1 : -1))
       : [];
@@ -43,6 +48,7 @@ export function useItems() {
       location: input.location,
       date: input.date,
       imgURL,
+      type: input.type,
       status: 'unclaimed',
       claimedBy: '',
       dateclaimed: '',
@@ -101,6 +107,12 @@ export function useItems() {
     });
   };
 
+  // Admin action: a lost report's item has been physically turned in, so it
+  // moves into the normal found/unclaimed → pending → claimed flow.
+  const markFound = async (id: string) => {
+    await updateItem(id, { type: 'found' });
+  };
+
   return {
     items,
     loading,
@@ -111,5 +123,6 @@ export function useItems() {
     approveClaim,
     rejectClaim,
     unclaimItem,
+    markFound,
   };
 }
