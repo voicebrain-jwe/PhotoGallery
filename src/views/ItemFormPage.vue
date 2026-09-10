@@ -131,6 +131,12 @@ const save = async () => {
     return;
   }
 
+  if (isEdit.value && existingItem.value && existingItem.value.status !== 'unclaimed') {
+    await showError('This item can no longer be edited.');
+    router.replace(`/items/${existingItem.value.id}`);
+    return;
+  }
+
   saving.value = true;
   try {
     if (isEdit.value && itemId.value) {

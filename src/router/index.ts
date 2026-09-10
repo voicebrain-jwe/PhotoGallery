@@ -3,7 +3,6 @@ import { RouteRecordRaw } from 'vue-router';
 import ItemsListPage from '../views/ItemsListPage.vue';
 import ItemDetailPage from '../views/ItemDetailPage.vue';
 import ItemFormPage from '../views/ItemFormPage.vue';
-import HomePage from '../views/HomePage.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -29,11 +28,6 @@ const routes: Array<RouteRecordRaw> = [
     path: '/items/:id/edit',
     name: 'EditItem',
     component: ItemFormPage
-  },
-  {
-    path: '/gallery',
-    name: 'Gallery',
-    component: HomePage
   }
 ]
 
